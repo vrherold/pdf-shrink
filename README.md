@@ -192,33 +192,6 @@ Time increases with:
 - **DPI dependent**: Very small targets may require 80 DPI (poor quality)
 - **Platform specific**: Uses `stat -f` (macOS). For Linux, change to `stat -c %s`
 
-## Testing
-
-A test suite is included to verify functionality:
-
-```bash
-# Run all tests
-./test_pdf_shrink.sh
-
-# Expected output shows:
-# ✓ PASS: Help message displays
-# ✓ PASS: Error handling works
-# ✓ PASS: Creates output files
-# ...
-```
-
-The test suite verifies:
-- Command-line argument parsing
-- Error handling (missing files, invalid parameters)
-- Output file creation
-- Size target compliance
-- Different size notations (KB, MB)
-- DPI range parameters
-- OCR functionality (if available)
-- Verbose mode
-
-**Note:** The test suite requires a `test.pdf` to exist in the same directory.
-
 ## License
 
 MIT License - See [LICENSE](LICENSE) file
