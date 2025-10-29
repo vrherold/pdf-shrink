@@ -116,6 +116,8 @@ The `-t` parameter accepts:
   --min-dpi 80 \           # Minimum DPI (default: 80)
   --max-dpi 300 \          # Maximum DPI (default: 300)
   --testpage 1 \           # Page number to test (default: 1)
+  --margin 0.90 \          # Target fraction (default: 0.90)
+  --no-conservative \      # Disable 10% downshift of chosen DPI
   --no-ocr \               # Skip OCR (default: OCR enabled)
   --verbose                # Verbose output
 ```
@@ -131,6 +133,9 @@ The `-t` parameter accepts:
 
 # Test a different page (if page 1 is atypical)
 ./pdf_shrink.sh -i document.pdf -t 3M --testpage 5
+
+# Aim very close to the target size (higher quality)
+./pdf_shrink.sh -i big.pdf -t 2M --max-dpi 600 --margin 0.98 --no-conservative
 ```
 
 ## How It Works

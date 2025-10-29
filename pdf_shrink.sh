@@ -4,13 +4,14 @@ set -euo pipefail
 
 usage(){ cat <<'EOF'
 Usage:
-  pdf_shrink.sh -i INPUT.pdf -t TARGET_SIZE [-o OUT_BASENAME] [--min-dpi N] [--max-dpi N] [--testpage N] [--no-ocr] [--verbose]
+  pdf_shrink.sh -i INPUT.pdf -t TARGET_SIZE [-o OUT_BASENAME] [--min-dpi N] [--max-dpi N] [--testpage N] [--margin FLOAT] [--no-conservative] [--no-ocr] [--verbose]
 EOF
 }
 
 # ---------- Args ----------
 INPUT=""; TARGET_HUMAN=""; OUT_BASENAME=""
 MIN_DPI=80; MAX_DPI=300; TESTPAGE=1; WANT_OCR=1; VERBOSE=0
+MARGIN=0.90; CONSERVATIVE=1
 while (($#)); do
   case "$1" in
     -i) INPUT="$2"; shift 2;;
@@ -19,6 +20,8 @@ while (($#)); do
     --min-dpi) MIN_DPI="$2"; shift 2;;
     --max-dpi) MAX_DPI="$2"; shift 2;;
     --testpage) TESTPAGE="$2"; shift 2;;
+    --margin) MARGIN="$2"; shift 2;;
+    --no-conservative) CONSERVATIVE=0; shift;;
     --no-ocr) WANT_OCR=0; shift;;
     --verbose) VERBOSE=1; shift;;
     -h|--help) usage; exit 0;;
@@ -110,13 +113,14 @@ PAGES=$(get_pages)
 [[ "$PAGES" =~ ^[0-9]+$ ]] || { echo "Could not determine page count."; exit 1; }
 echo "→ Target size: $(human $TARGET_BYTES)  | Pages: $PAGES  | File: $INPUT"
 
-# DPI candidates (descending, in range)
-CANDS=(); for c in 300 260 240 220 200 180 170 160 150 140 130 120 110 100 95 90 85 80; do
-  ((c<=MAX_DPI && c>=MIN_DPI)) && CANDS+=("$c")
+# DPI candidates (descending, in range; step 10)
+CANDS=()
+for ((c=MAX_DPI; c>=MIN_DPI; c-=10)); do
+  CANDS+=("$c")
 done
 (( ${#CANDS[@]} )) || { echo "No DPI candidates in range ${MIN_DPI}-${MAX_DPI}."; exit 1; }
 
-MARGIN=0.90; OCR_HEADROOM=0.92
+OCR_HEADROOM=0.92
 BEST_DPI=""; target_now=$TARGET_BYTES
 (( WANT_OCR==1 && HAVE_OCRMYPDF==1 )) && target_now=$(awk -v t=$TARGET_BYTES -v r=$OCR_HEADROOM 'BEGIN{printf "%.0f", t*r}')
 
@@ -141,11 +145,15 @@ for dpi in "${CANDS[@]}"; do
   if (( est_total <= limit )); then BEST_DPI="$dpi"; break; fi
 done
 
-# conservatively "go a bit lower"
+# conservatively "go a bit lower" (optional)
 if [[ -z "$BEST_DPI" ]]; then BEST_DPI=$(( MIN_DPI )); fi
-dec=$(( BEST_DPI * 90 / 100 )); (( dec < MIN_DPI )) && dec=$MIN_DPI
-echo "→ Choosing conservatively ${dec} dpi."
-BEST_DPI=$dec
+if (( CONSERVATIVE )); then
+  dec=$(( BEST_DPI * 90 / 100 )); (( dec < MIN_DPI )) && dec=$MIN_DPI
+  echo "→ Choosing conservatively ${dec} dpi."
+  BEST_DPI=$dec
+else
+  echo "→ Choosing ${BEST_DPI} dpi (no conservative reduction)."
+fi
 
 echo "→ Rasterizing with ${BEST_DPI} dpi …"
 raster_full "$BEST_DPI" "$OUT_NO_OCR"
